@@ -2,5 +2,5 @@
 *.o
 tmp*
 a.out
-.ccls-cache/*
+/.ccls-cache/*
 tscc
