@@ -20,11 +20,25 @@ struct Token {
 	char *str; 		//トークン文字列
 };
 
+char *user_input;
 Token *token;
 
 void error(char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	fprintf(stderr, "\n");
+	exit(1);
+}
+
+void error_at(char *loc, char *fmt, ...) {
+	va_list ap;
+	va_start(ap, fmt);
+
+	int pos = loc - user_input;
+	fprintf(stderr, "%s\n", user_input);
+	fprintf(stderr, "%*s", pos, " "); //pos個の空白を出力
+	fprintf(stderr, "^ ");
 	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
 	exit(1);
@@ -41,14 +55,14 @@ bool consume(char op) {
 //次のトークンが期待している記号の場合、トークンを一つ読み進める。それ以外はエラーを返す。
 int expect(char op) {
 	if (token->kind != TK_RESERVED || token->str[0] != op)
-		error("'%c'ではありません", op);
+		error_at(token->str, "expected '%c'", op);
 	token = token->next;
 }
 
 //次のトークンが数値の場合、トークンを一つ読み進めてその数値を返す。
 int expect_number() {
 	if (token->kind != TK_NUM)
-		error("数ではありません");
+		error_at(token->str, "数ではありません");
 	int val = token->val;
 	token = token->next;
 	return val;
@@ -68,7 +82,8 @@ Token *new_token(TokenKind kind, Token *cur, char *str) {
 }
 
 // 入力文字列pをトークンナイズしてそれを返す
-Token *tokennize(char *p) {
+Token *tokennize() {
+	char *p = user_input;
 	Token head;
 	head.next = NULL;
 	Token *cur = &head;
@@ -89,19 +104,24 @@ Token *tokennize(char *p) {
 			continue;
 		}
 
-		error("トークナイズできません");
+		error_at(p, "トークナイズできません");
 	}
 
 	new_token(TK_EOF, cur, p);
 	return head.next;
 }
+
+
+
+
 int main(int argc, char **argv) {
 	if (argc != 2) {
 		fprintf(stderr , "引数の個数が正しくない\n");
 		return 1;
 	}
 
-	token = tokennize(argv[1]);
+	user_input = argv[1];
+	token = tokennize();
 
 	printf(".intel_syntax noprefix\n");
 	printf(".globl main\n");
