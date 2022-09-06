@@ -6,18 +6,18 @@
 #include <string.h>
 
 typedef enum {
-	TK_RESERVED,	//記号
-	TK_NUM,  	 	//整数トークン
-	TK_EOF,  		//入力の終わりを表すトークン
+	TK_RESERVED,	//symbol
+	TK_NUM,  	 	//num
+	TK_EOF,  		//EOF
 } TokenKind;
 
 typedef struct Token Token;
 
 struct Token {
-	TokenKind kind; //トークンの型
-	Token *next; 	//次の入力のトークン
-	int val; 		//kindがTK_NUMの場合, その数値
-	char *str; 		//トークン文字列
+	TokenKind kind; //type of token
+	Token *next;
+	int val; 		//if tolen is num, val
+	char *str;
 };
 
 char *user_input;
@@ -37,14 +37,14 @@ void error_at(char *loc, char *fmt, ...) {
 
 	int pos = loc - user_input;
 	fprintf(stderr, "%s\n", user_input);
-	fprintf(stderr, "%*s", pos, " "); //pos個の空白を出力
+	fprintf(stderr, "%*s", pos, " "); //output blank number of pos
 	fprintf(stderr, "^ ");
 	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
 	exit(1);
 }
 
-//次のトークンが期待している記号の時には、トークンを一つ読み進めてTrue.
+// if token is symbol, read forward a token and return true
 bool consume(char op) {
 	if (token->kind != TK_RESERVED || token->str[0] != op)
 		return false;
@@ -52,14 +52,14 @@ bool consume(char op) {
 	return true;
 }
 
-//次のトークンが期待している記号の場合、トークンを一つ読み進める。それ以外はエラーを返す。
+//if token is mark, read forward one token
 int expect(char op) {
 	if (token->kind != TK_RESERVED || token->str[0] != op)
 		error_at(token->str, "expected '%c'", op);
 	token = token->next;
 }
 
-//次のトークンが数値の場合、トークンを一つ読み進めてその数値を返す。
+//if next token is num, return this num and read forward one token
 int expect_number() {
 	if (token->kind != TK_NUM)
 		error_at(token->str, "数ではありません");
@@ -72,7 +72,7 @@ bool at_eof() {
 	return token->kind == TK_EOF;
 }
 
-// 新しいトークンを作成してCurにつなげる
+// gen new token and connect Cur
 Token *new_token(TokenKind kind, Token *cur, char *str) {
 	Token *tok = calloc(1, sizeof(Token));
 	tok->kind = kind;
@@ -81,7 +81,7 @@ Token *new_token(TokenKind kind, Token *cur, char *str) {
 	return tok;
 }
 
-// 入力文字列pをトークンナイズしてそれを返す
+//  tokennize input p and return p
 Token *tokennize() {
 	char *p = user_input;
 	Token head;
@@ -148,6 +148,7 @@ Node *new_node_num(int val) {
 
 Node *mul();
 Node *primary();
+Node *unary();
 
 // expr = mul('+' mul | "-" mul)*
 Node *expr() {
@@ -166,15 +167,15 @@ Node *expr() {
 	}
 }
 
-// mul = primary("*" primary | "/" primary)*
+// mul = unary("*" unary | "/" unary)*
 Node *mul() {
-	Node *node = primary();
+	Node *node = unary();
 	for(;;) {
 		if (consume('*')) {
-			node = new_node(ND_MUL, node, primary());
+			node = new_node(ND_MUL, node, unary());
 		}
 		else if (consume('/')) {
-			node = new_node(ND_DIV, node, primary());
+			node = new_node(ND_DIV, node, unary());
 		}
 		else {
 			return node;
@@ -192,6 +193,15 @@ Node *primary() {
 	}
 
 	return new_node_num(expect_number());
+}
+
+// unary = ("+" | "-")? primary
+Node *unary() {
+	if(consume('+'))
+		return primary();
+	if(consume('-'))
+		return new_node(ND_SUB, new_node_num(0), primary());
+	return primary();
 }
 
 // code gen(stack machine)
