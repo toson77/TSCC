@@ -8,6 +8,7 @@
 typedef enum
 {
     TK_RESERVED, // symbol
+    TK_IDENT, // identifier
     TK_NUM,      // num
     TK_EOF,      // EOF
 } TokenKind;
@@ -29,10 +30,12 @@ typedef enum
     ND_SUB, // -
     ND_MUL, // *
     ND_DIV, // /
+    ND_ASSIGN, // =
     ND_EQ,  // ==
     ND_NE,  // !=
     ND_LT,  // <
     ND_LE,  // <=
+    ND_LVAR, // local_val
     ND_NUM, // Integer
 } NodeKind;
 
@@ -44,11 +47,17 @@ struct Node
     Node *lhs;     // Left-hand side
     Node *rhs;     // Right-hand side
     int val;       // Used if kind == ND_NUM
+    int offset;     // Used if kind == ND_LVAR
 };
 
 extern char *user_input;
 extern Token *token;
+extern Node *code[100];
 
 void gen(Node *node);
+void error(char *fmt, ...);
 Token *tokennize();
+Token *consume_ident();
+
 Node *expr();
+void program();
